@@ -4,7 +4,7 @@
   "description": "Le dos crawlé pour les nuls",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,9 @@
     "url": "https://github.com/Macdows/leboncoin-crawler/issues"
   },
   "homepage": "https://github.com/Macdows/leboncoin-crawler#readme",
+  "bin": {
+    "leboncoin": "./index.js"
+  },
   "dependencies": {
     "cheerio": "^0.22.0",
     "commander": "^2.9.0",
