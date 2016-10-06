@@ -1,0 +1,29 @@
+{
+  "name": "leboncoin-crawler",
+  "version": "1.0.0",
+  "description": "Le dos crawlé pour les nuls",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Macdows/leboncoin-crawler.git"
+  },
+  "keywords": [
+    "nodejs",
+    "crawler"
+  ],
+  "author": "Macdows",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Macdows/leboncoin-crawler/issues"
+  },
+  "homepage": "https://github.com/Macdows/leboncoin-crawler#readme",
+  "dependencies": {
+    "cheerio": "^0.22.0",
+    "commander": "^2.9.0",
+    "inquirer": "^1.2.1",
+    "superagent": "^2.3.0"
+  }
+}
