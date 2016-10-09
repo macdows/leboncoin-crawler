@@ -7,6 +7,8 @@ const fs = require('fs')
 
 db.open('default.db').then(()=>{
      return db.run("CREATE TABLE IF NOT EXISTS searches (keyword, title, author, price, city, description, creationDate)");
+}).then(()=>{
+     return db.run("CREATE TABLE IF NOT EXISTS url (url VARCHAR, checked BOOLEAN)");
 })
 
 program
@@ -31,8 +33,14 @@ if (program.search) {
     getAllUrls(url)
     .then((res) => {
       for (var i = 0, len = res.length; i < len; i++) {
-        getPageData(res[i], keyword)
+        insertUrl(res[i])
       }
+    }).then(() => {
+      db.all("SELECT * FROM url WHERE checked = ?", false).then((res) => {
+        for (var i = 0, len = res.length; i < len; i++) {
+          getPageData(res[i].url, keyword)
+        }
+      })
     })
 
   })
@@ -91,7 +99,10 @@ function getPageData(i, keyword) {
       })
       .end()
       .then((data) => {
-        insertDatabase(keyword, data[0], data[1], data[2], data[3], data[4], data[5])
+        insertPageData(keyword, data[0], data[1], data[2], data[3], data[4], data[5])
+      })
+      .then(() => {
+        db.run("UPDATE url SET checked = ?", true);
       })
       .catch(function (err)
       {
@@ -99,7 +110,19 @@ function getPageData(i, keyword) {
       })
 }
 
-function insertDatabase(keyword, title, author, price, city, desc, createdAt) {
+function insertPageData(keyword, title, author, price, city, desc, createdAt) {
   db.run("INSERT INTO searches VALUES (?, ?, ?, ?, ?, ?, ?)", keyword, title, author, price, city, desc, createdAt);
-  console.log('db success');
+  console.log('db success (page data)');
+}
+
+function insertUrl(url) {
+  db.all("SELECT COUNT(*) AS count FROM url WHERE url = ?", url)
+  .then((res) => {
+    if (res[0].count != 0) {
+      // console.log('match found');
+    } else {
+      db.run("INSERT INTO url VALUES (?, ?)", url, false);
+      // console.log('db success (url)');
+    }
+  })
 }
