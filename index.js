@@ -13,6 +13,7 @@ program
   .version('1.0.0')
   .option('-s, --search', 'Lance la recherche d\'annonces en ligne')
   .option('-d, --database', 'Récupère les annonces enregistrées en base de données')
+  .option('-f, --file', 'Enregistre les données en base dans un fichier')
 
 program.parse(process.argv)
 
@@ -37,6 +38,17 @@ if (program.search) {
   })
 } else if(program.database) {
   console.log('--database');
+}  else if(program.file) {
+  console.log('--file');
+  // inquirer.prompt([
+  //   {
+  //     type: 'input',
+  //     message: 'Entrez le mot clé à rechercher : ',
+  //     name: 'keyword'
+  //   }
+  // ]).then((answers) => {
+  //
+  // })
 } else {
   program.help()
 }
@@ -63,20 +75,22 @@ function getPageData(i, keyword) {
   let nightmare = Nightmare()
     nightmare
       .goto('https:' + i)
+      // .click('button.phoneNumber')
+      // .wait('.phoneNumber a')
       .evaluate(function () {
         let data = []
         var title = document.querySelector('h1.no-border').innerText
         var author = document.querySelector('.properties div.line_pro p a').innerText
         var price = document.querySelector('.item_price span.value').innerText
         var city = document.querySelector('div.line_city h2 span.value').innerText
-        var desc = document.querySelector('div.properties_description p.value').innerText // .replace(/\n/g, ' ')
+        var desc = document.querySelector('div.properties_description p.value').innerText
         var createdAt = document.querySelector('p.line_pro').innerText
+        // var phone = document.querySelector('.phoneNumber a').innerText
         data.push(title, author, price, city, desc, createdAt)
         return data
       })
       .end()
       .then((data) => {
-        console.log(data);
         insertDatabase(keyword, data[0], data[1], data[2], data[3], data[4], data[5])
       })
       .catch(function (err)
