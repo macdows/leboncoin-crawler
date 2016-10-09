@@ -24,10 +24,10 @@
     "leboncoin": "./index.js"
   },
   "dependencies": {
-    "cheerio": "^0.22.0",
     "commander": "^2.9.0",
     "inquirer": "^1.2.1",
-    "sqlite": "^2.2.0",
-    "superagent": "^2.3.0"
+    "jquery": "^3.1.1",
+    "nightmare": "^2.7.0",
+    "sqlite": "^2.2.0"
   }
 }

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-const agent = require('superagent')
-const cheerio = require('cheerio')
+const Nightmare = require('nightmare')
 const program = require('commander')
 const inquirer = require('inquirer')
 const db = require('sqlite')
@@ -12,7 +11,8 @@ db.open('default.db').then(()=>{
 
 program
   .version('1.0.0')
-  .option('-s, --search', 'Lance la recherche d\'annonces')
+  .option('-s, --search', 'Lance la recherche d\'annonces en ligne')
+  .option('-d, --database', 'Récupère les annonces enregistrées en base de données')
 
 program.parse(process.argv)
 
@@ -26,45 +26,66 @@ if (program.search) {
   ]).then((answers) => {
     var url = 'https://www.leboncoin.fr/annonces/offres/aquitaine/?th=1&q=' + answers.keyword + '&parrot=0'
     let keyword = answers.keyword
-    let arr = []
-    agent
-      .get(url)
-      .then(function(res, err) {
-        if(err) {
-          console.log("Error: " + err);
-        }
-        console.log('Status code: ', res.statusCode);
-        if(res.statusCode === 200) {
-          let $ = cheerio.load(res.text)
-          $('.tabsContent ul li a').each(function() {
-            arr.push($(this).attr('href'))
-          })
-          return arr
-        }
-      }).then((arr) => {
-        for (var i = 0, len = arr.length; i < len; i++) {
-          agent
-            .get('https:' + arr[i])
-            .then(function(res, err) {
-              if(err) {
-                console.log("Error: " + err);
-              }
-              if(res.statusCode === 200) {
-                let $ = cheerio.load(res.text)
-                db.run("INSERT INTO searches VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        keyword,
-                        $('h1.no-border').text(),
-                        $('.properties div.line_pro p a').text(),
-                        $('.item_price span.value').text(),
-                        $('div.line_city h2 span.value').text(),
-                        $('p#description').text(),
-                        $('p.line_pro').text()
-                );
-              }
-            })
-        }
-      })
+
+    getAllUrls(url)
+    .then((res) => {
+      for (var i = 0, len = res.length; i < len; i++) {
+        getPageData(res[i], keyword)
+      }
+    })
+
   })
+} else if(program.database) {
+  console.log('--database');
 } else {
   program.help()
+}
+
+function getAllUrls (url) {
+  let nightmare = Nightmare()
+  return nightmare
+    .goto(url)
+    .evaluate(function () {
+      let arr = []
+      $('.tabsContent ul li a').each(function() {
+        arr.push($(this).attr('href'))
+      })
+      return arr
+    })
+    .end()
+    .catch(function (err)
+    {
+      console.error('Search failed:', err);
+    })
+}
+
+function getPageData(i, keyword) {
+  let nightmare = Nightmare()
+    nightmare
+      .goto('https:' + i)
+      .evaluate(function () {
+        let data = []
+        var title = document.querySelector('h1.no-border').innerText
+        var author = document.querySelector('.properties div.line_pro p a').innerText
+        var price = document.querySelector('.item_price span.value').innerText
+        var city = document.querySelector('div.line_city h2 span.value').innerText
+        var desc = document.querySelector('div.properties_description p.value').innerText // .replace(/\n/g, ' ')
+        var createdAt = document.querySelector('p.line_pro').innerText
+        data.push(title, author, price, city, desc, createdAt)
+        return data
+      })
+      .end()
+      .then((data) => {
+        console.log(data);
+        insertDatabase(keyword, data[0], data[1], data[2], data[3], data[4], data[5])
+      })
+      .catch(function (err)
+      {
+        console.error('Search failed:', err);
+      })
+}
+
+function insertDatabase(keyword, title, author, price, city, desc, createdAt) {
+  db.run("INSERT INTO searches VALUES (?, ?, ?, ?, ?, ?, ?)", keyword, title, author, price, city, desc, createdAt);
+  console.log('db success');
 }
