@@ -37,36 +37,31 @@ function start() {
 
       getAllUrls(url)
       .then((res) => {
-        let i
-        for (i = res.length; i--;) {
+        for (var i = 0, len = res.length; i < len; i++) {
           insertUrl(res[i])
         }
-        console.log('avant');
-        console.log(i);
-        if (i < 0) {
-          console.log('après');
-          db.all("SELECT * FROM url WHERE checked = ?", false).then((res) => {
-            for (var i = 0, len = res.length; i < len; i++) {
-              getPageData(res[i].url, keyword)
-            }
-          })
-        }
       })
-
+      .then(() => {
+        console.log('après');
+        db.all("SELECT * FROM url WHERE checked = ?", false).then((res) => {
+          for (var i = 0, len = res.length; i < len; i++) {
+            getPageData(res[i].url, keyword)
+          }
+        })
+      })
     })
-  } else if(program.database) {
+  } else if (program.database) {
     console.log('--database');
-  }  else if(program.file) {
-    console.log('--file');
-    // inquirer.prompt([
-    //   {
-    //     type: 'input',
-    //     message: 'Entrez le mot clé à rechercher : ',
-    //     name: 'keyword'
-    //   }
-    // ]).then((answers) => {
-    //
-    // })
+  }  else if (program.file) {
+    inquirer.prompt([
+      {
+        type: 'input',
+        message: 'Entrez le mot clé à rechercher dans la base de données : ',
+        name: 'keyword_file'
+      }
+    ]).then((answers) => {
+      writeFile(answers)
+    })
   } else {
     program.help()
   }
@@ -144,4 +139,40 @@ function insertUrl(url) {
       })
     }
   })
+}
+
+function writeFile(answers) {
+  db.all("SELECT COUNT(keyword) AS count FROM searches WHERE keyword = ?", answers.keyword_file)
+  .then((res) => {
+    if (res[0].count == 0) {
+      console.log('No such keyword in database. Search first');
+      // start()
+    } else {
+      db.all("SELECT * FROM searches WHERE keyword = ?", answers.keyword_file)
+      .then((res) => {
+        try {
+          fs.writeFile('annonces_' + answers.keyword_file + '.txt', 'Résulats de la recherche \'' + answers.keyword_file + '\'\n\n', (err) => {
+            if (err) throw err
+            console.log('File written')
+          })
+          res.forEach(function(index) {
+            fs.appendFile('annonces_' + answers.keyword_file + '.txt', formatData(index), (err) => {
+              if (err) throw err
+              console.log('File written')
+            })
+          })
+        } catch (err) {
+          console.error('ERR > ', err)
+        }
+      })
+    }
+  })
+}
+
+function formatData(index) {
+  let price = 'Non renseigné'
+  if (index.price != '') {
+    price = index.price
+  }
+  return 'Titre: ' + index.title + '\nAuteur: ' + index.author + '\nPrix: ' + price + '\nVille: ' + index.city + '\nDescription:\n' + index.description + '\n' + index.creationDate + '\n\n\n'
 }
