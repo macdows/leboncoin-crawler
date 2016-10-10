@@ -19,52 +19,73 @@ function start() {
   program
     .version('1.0.0')
     .option('-s, --search', 'Lance la recherche d\'annonces en ligne')
-    .option('-d, --database', 'Récupère les annonces enregistrées en base de données')
-    .option('-f, --file', 'Enregistre les données en base dans un fichier')
 
   program.parse(process.argv)
 
   if (program.search) {
     inquirer.prompt([
       {
-        type: 'input',
-        message: 'Entrez le mot clé à rechercher : ',
-        name: 'keyword'
+        type: 'checkbox',
+        message: 'Sélectionnez l\' action à effectuer :',
+        name: 'action',
+        choices: [
+          'Rechercher un mot clé en ligne',
+          'Enregistrer dans un fichier les données correspondantes à un mot clé',
+          'Annuler'
+        ]
       }
     ]).then((answers) => {
-      var url = 'https://www.leboncoin.fr/annonces/offres/aquitaine/?th=1&q=' + answers.keyword + '&parrot=0'
-      let keyword = answers.keyword
-
-      getAllUrls(url)
-      .then((res) => {
-        for (var i = 0, len = res.length; i < len; i++) {
-          insertUrl(res[i])
-        }
-      })
-      .then(() => {
-        console.log('après');
-        db.all("SELECT * FROM url WHERE checked = ?", false).then((res) => {
-          for (var i = 0, len = res.length; i < len; i++) {
-            getPageData(res[i].url, keyword)
-          }
-        })
-      })
-    })
-  } else if (program.database) {
-    console.log('--database');
-  }  else if (program.file) {
-    inquirer.prompt([
-      {
-        type: 'input',
-        message: 'Entrez le mot clé à rechercher dans la base de données : ',
-        name: 'keyword_file'
+      if (answers.action[0] == 'Rechercher un mot clé en ligne') {
+        search()
+      } else if (answers.action[0] == 'Enregistrer dans un fichier les données correspondantes à un mot clé') {
+        save()
+      } else if (answers.action[0] == 'Annuler') {
+        process.exit(1)
       }
-    ]).then((answers) => {
-      writeFile(answers)
     })
   } else {
     program.help()
   }
+}
+
+function search () {
+  inquirer.prompt([
+    {
+      type: 'input',
+      message: 'Entrez le mot clé à rechercher : ',
+      name: 'keyword'
+    }
+  ]).then((answers) => {
+    var url = 'https://www.leboncoin.fr/annonces/offres/aquitaine/?th=1&q=' + answers.keyword + '&parrot=0'
+    let keyword = answers.keyword
+
+    getAllUrls(url)
+    .then((res) => {
+      for (var i = 0, len = res.length; i < len; i++) {
+        insertUrl(res[i])
+      }
+    })
+    .then(() => {
+      console.log('après');
+      db.all("SELECT * FROM url WHERE checked = ?", false).then((res) => {
+        for (var i = 0, len = res.length; i < len; i++) {
+          getPageData(res[i].url, keyword)
+        }
+      })
+    })
+  })
+}
+
+function save () {
+  inquirer.prompt([
+    {
+      type: 'input',
+      message: 'Entrez le mot clé à rechercher dans la base de données : ',
+      name: 'keyword_file'
+    }
+  ]).then((answers) => {
+    writeFile(answers)
+  })
 }
 
 function getAllUrls (url) {
@@ -146,7 +167,7 @@ function writeFile(answers) {
   .then((res) => {
     if (res[0].count == 0) {
       console.log('No such keyword in database. Search first');
-      // start()
+      start()
     } else {
       db.all("SELECT * FROM searches WHERE keyword = ?", answers.keyword_file)
       .then((res) => {
