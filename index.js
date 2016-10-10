@@ -12,37 +12,47 @@ db.open('default.db').then(() => {
   ])
 }).then(() => {
   console.log('Database opened and schemas created')
-  start()
+  start(null)
 })
 
-function start() {
+function start(restart) {
+  if(restart != null) {
+    program.menu = true
+  }
+
   program
     .version('1.0.0')
-    .option('-s, --search', 'Lance la recherche d\'annonces en ligne')
+    .option('-m, --menu', 'Crawler menu')
+    .option('-s, --search', 'Search a keyword online')
+    .option('-e, --export', 'Export database into file (with a keyword)')
 
   program.parse(process.argv)
 
-  if (program.search) {
+  if (program.menu) {
     inquirer.prompt([
       {
         type: 'checkbox',
-        message: 'Sélectionnez l\' action à effectuer :',
+        message: 'Select the action to perfom :',
         name: 'action',
         choices: [
-          'Rechercher un mot clé en ligne',
-          'Enregistrer dans un fichier les données correspondantes à un mot clé',
-          'Annuler'
+          'Search a keyword online',
+          'Export database into file (with a keyword)',
+          'Cancel'
         ]
       }
     ]).then((answers) => {
-      if (answers.action[0] == 'Rechercher un mot clé en ligne') {
+      if (answers.action[0] == 'Search a keyword online') {
         search()
-      } else if (answers.action[0] == 'Enregistrer dans un fichier les données correspondantes à un mot clé') {
+      } else if (answers.action[0] == 'Export database into file (with a keyword)') {
         save()
-      } else if (answers.action[0] == 'Annuler') {
+      } else if (answers.action[0] == 'Cancel') {
         process.exit(1)
       }
     })
+  } else if (program.search) {
+    search()
+  } else if (program.export) {
+    save()
   } else {
     program.help()
   }
@@ -52,7 +62,7 @@ function search () {
   inquirer.prompt([
     {
       type: 'input',
-      message: 'Entrez le mot clé à rechercher : ',
+      message: 'Type a keyword to search online : ',
       name: 'keyword'
     }
   ]).then((answers) => {
@@ -61,16 +71,18 @@ function search () {
 
     getAllUrls(url)
     .then((res) => {
-      for (var i = 0, len = res.length; i < len; i++) {
-        insertUrl(res[i])
-      }
-    })
-    .then(() => {
-      console.log('après');
-      db.all("SELECT * FROM url WHERE checked = ?", false).then((res) => {
-        for (var i = 0, len = res.length; i < len; i++) {
-          getPageData(res[i].url, keyword)
-        }
+      let i = 0
+      res.forEach(function(index) {
+        insertUrl(index).then(() => {
+          i++
+          if (i == res.length) {
+            db.all("SELECT * FROM url WHERE checked = ?", false).then((res) => {
+              for (var i = 0, len = res.length; i < len; i++) {
+                getPageData(res[i].url, keyword)
+              }
+            })
+          }
+        })
       })
     })
   })
@@ -80,7 +92,7 @@ function save () {
   inquirer.prompt([
     {
       type: 'input',
-      message: 'Entrez le mot clé à rechercher dans la base de données : ',
+      message: 'Type a keyword to search in the database : ',
       name: 'keyword_file'
     }
   ]).then((answers) => {
@@ -149,12 +161,12 @@ function insertPageData(keyword, data) {
 }
 
 function insertUrl(url) {
-  db.all("SELECT COUNT(*) AS count FROM url WHERE url = ?", url)
+  return db.all("SELECT COUNT(*) AS count FROM url WHERE url = ?", url)
   .then((res) => {
     if (res[0].count != 0) {
       console.log('Match found, no need to insert');
     } else {
-      db.run("INSERT INTO url VALUES (?, ?)", url, false)
+      return db.run("INSERT INTO url VALUES (?, ?)", url, false)
       .then(() => {
         console.log('Insert successful (url)');
       })
@@ -167,7 +179,7 @@ function writeFile(answers) {
   .then((res) => {
     if (res[0].count == 0) {
       console.log('No such keyword in database. Search first');
-      start()
+      start(1)
     } else {
       db.all("SELECT * FROM searches WHERE keyword = ?", answers.keyword_file)
       .then((res) => {
