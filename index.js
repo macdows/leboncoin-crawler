@@ -31,7 +31,7 @@ function start(restart) {
   if (program.menu) {
     inquirer.prompt([
       {
-        type: 'checkbox',
+        type: 'list',
         message: 'Select the action to perfom :',
         name: 'action',
         choices: [
@@ -41,11 +41,12 @@ function start(restart) {
         ]
       }
     ]).then((answers) => {
-      if (answers.action[0] == 'Search a keyword online') {
+      console.log(answers.action);
+      if (answers.action == 'Search a keyword online') {
         search()
-      } else if (answers.action[0] == 'Export database into file (with a keyword)') {
+      } else if (answers.action == 'Export database into file (with a keyword)') {
         save()
-      } else if (answers.action[0] == 'Cancel') {
+      } else if (answers.action == 'Cancel') {
         process.exit(1)
       }
     })
@@ -184,14 +185,10 @@ function writeFile(answers) {
       db.all("SELECT * FROM searches WHERE keyword = ?", answers.keyword_file)
       .then((res) => {
         try {
-          fs.writeFile('annonces_' + answers.keyword_file + '.txt', 'Résulats de la recherche \'' + answers.keyword_file + '\'\n\n', (err) => {
-            if (err) throw err
-            console.log('File written')
-          })
           res.forEach(function(index) {
             fs.appendFile('annonces_' + answers.keyword_file + '.txt', formatData(index), (err) => {
               if (err) throw err
-              console.log('File written')
+              console.log('Line written')
             })
           })
         } catch (err) {
