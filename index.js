@@ -14,7 +14,7 @@ db.open('default.db').then(() => { // Ouvre ou crée la base de données
   ])
 }).then(() => {
   console.log('Database opened and schemas created')
-  start(null) // Lance
+  start(null)
 })
 
 function start(restart) {
